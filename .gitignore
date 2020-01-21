@@ -1,0 +1,7 @@
+.terraform
+terraform-provider-terracorp
+*.tfstate
+*.tfstate.backup
+*.log
+llc-1-orig.pdf
+name-change-filled.pdf
