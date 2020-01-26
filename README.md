@@ -8,6 +8,12 @@ configuration, run `terraform plan` to review the documents, and `terraform appl
 
 Imagine a world where you could just fork an existing corporate structure and innovate from there.
 
+## Building
+
+```
+go build -o terraform-provider-terracorp && terraform init
+```
+
 ## Thoughts
 
 Terraform has a lot of infrastructure built out which overlaps with what we'd probably need in such

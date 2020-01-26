@@ -55,7 +55,23 @@ func resourceLLC() *schema.Resource {
                 Type:     schema.TypeString,
                 Required: true,
             },
+            "phone_number": &schema.Schema{
+                Type:     schema.TypeString,
+                Required: true,
+            },
             "name": &schema.Schema{
+                Type:     schema.TypeString,
+                Required: true,
+            },
+            "address": &schema.Schema{
+                Type:     schema.TypeString,
+                Required: true,
+            },
+            "zip": &schema.Schema{
+                Type:     schema.TypeString,
+                Required: true,
+            },
+            "city": &schema.Schema{
                 Type:     schema.TypeString,
                 Required: true,
             },
@@ -134,40 +150,53 @@ func resourceLLCCreate(d *schema.ResourceData, m interface{}) error {
     defer file.Close()
     log.SetOutput(file)
 
+    d.Partial(true)
 
-    // entity_name := d.Get("name").(string)
+    name_parts := strings.Split(d.Get("owner_name").(string), " ")
 
-    // var customURL url.URL
-    // customURL.Scheme = "https"
-    // customURL.Host = "businesssearch.sos.ca.gov"
-    // customURL.Path = "/CBS/SearchResults"
-    // newQueryValues := customURL.Query()
-    // newQueryValues.Set("filing", "")
-    // newQueryValues.Set("SearchType", "LPLLC")
-    // newQueryValues.Set("SearchCriteria", entity_name)
-    // newQueryValues.Set("SearchSubType", "Keyword")
-    // customURL.RawQuery = newQueryValues.Encode()
+    form := fillpdf.Form{
+        "1FirstName": name_parts[0],
+        "1LastName": name_parts[1],
+        "1PhoneNumber": d.Get("phone_number").(string),
+        "EntityName": d.Get("name").(string),
+        // "2EntityNumber": d.Id(),
+        // "1CorporationName": old_name.(string),
+        // "3bNewCorporationName": new_name.(string),
+        "2CommentsLine1": "$ terraform -v",
+        "2CommentsLine2": "Terraform v0.12.19",
+        "2CommentsLine3": "+ provider.terracorp (unversioned)",
 
+        "3ReturneeCompanyName": d.Get("name").(string),
+        "3ReturneeName": d.Get("owner_name").(string),
+        "3ReturneeAddress": d.Get("address").(string),
+        "3ReturneeCityStateZip": d.Get("city").(string) + ", CA " + d.Get("zip").(string),
 
-    // response, err := http.Get(customURL.String())
-    // if err != nil {
-    //     log.Fatal(err)
-    // }
-    // defer response.Body.Close()
+        "1 Limited Liability Company Name See Instructions  Must contain an LLC identifier such as LLC or LLC  LLC will be added if not included": d.Get("name").(string),
+        "a Initial Street Address of Designated Office in California  Do not enter a PO Box": d.Get("address").(string),
+        "City no abbreviations": d.Get("city").(string),
+        "Zip Code": d.Get("zip").(string),
 
-    // // Create a goquery document from the HTTP response
-    // document, err := goquery.NewDocumentFromReader(response.Body)
-    // if err != nil {
-    //     log.Fatal("Error loading HTTP response body. ", err)
-    // }
+        "a California Agents First Name if agent is not a corporation": name_parts[0],
+        "Last Name": name_parts[1],
+        "b Street Address if agent is not a corporation  Do not enter a PO Box": d.Get("address").(string),
+        "City no abbreviations_3": d.Get("city").(string),
+        "Zip Code_3": d.Get("zip").(string),
+        "Print your name here": d.Get("owner_name").(string),
+    }
 
-    // // Find all links and process them with the function
-    // // defined earlier
-    // entityID := strings.TrimSpace(document.Find(".EntityTable tbody tr td:first-child").Text())
-    
-    // // log.Printf("[WARN] Creating membership: %s", address)
-    // d.SetId(entityID)
-    return resourceLLCRead(d, m)
+    // Fill the form PDF with our values.
+    err = fillpdf.Fill(form, "templates/llc-1.pdf", "llc-1-filled.pdf", true)
+
+    if err != nil {
+        return err
+    }
+
+    d.Partial(false)
+
+    d.SetId("328183")
+
+    // return errors.New("hello")
+    return nil;
 }
 
 func resourceLLCRead(d *schema.ResourceData, m interface{}) error {
@@ -203,100 +232,19 @@ func resourceLLCUpdate(d *schema.ResourceData, m interface{}) error {
             "2CommentsLine2": "Terraform v0.12.19",
             "2CommentsLine3": "+ provider.terracorp (unversioned)",
 
-            "3ReturneeName": "Kevin Kwok",
+            
             "3ReturneeCompanyName": new_name.(string),
-            "3ReturneeAddress": "683 Brannan St, Unit 204",
-            "3ReturneeCityStateZip": "San Francisco, CA 94107",
+            "3ReturneeName": d.Get("owner_name").(string),
+            "3ReturneeAddress": d.Get("address").(string),
+            "3ReturneeCityStateZip": d.Get("city").(string) + ", CA " + d.Get("zip").(string),
         }
 
         // Fill the form PDF with our values.
-        err = fillpdf.Fill(form, "name-change.pdf", "name-change-filled.pdf", true)
+        err = fillpdf.Fill(form, "templates/name-change.pdf", "name-change-filled.pdf", true)
 
         if err != nil {
             return err
         }
-
-        fromAddy := Address {
-            Name: "Kevin Kwok",
-            AddressLine1: "683 Brannan St",
-            AddressLine2: "Unit 204",
-            AddressState: "CA",
-            AddressCity: "San Francisco",
-            AddressZip: "94107",
-        }
-
-        toAddy := Address {
-            Name: "Kevin Kwok",
-            AddressLine1: "228 CLIPPER STREET",
-            // AddressLine2: "Unit 204",
-            AddressState: "CA",
-            AddressCity: "San Francisco",
-            AddressZip: "94114",
-        }
-
-        toAddyJSON, err := json.Marshal(toAddy)
-        if err != nil {
-            log.Print(err)
-        }
-        log.Print(string(toAddyJSON))
-
-        fromAddyJSON, err := json.Marshal(fromAddy)
-        if err != nil {
-            log.Print(err)
-        }
-        log.Print(string(fromAddyJSON))
-
-
-        filename := "name-change-filled.pdf"
-        url := "https://api.lob.com/v1/letters"
-
-        file, err = os.Open(filename)
-
-        if err != nil {
-            log.Fatal(err)
-        }
-        defer file.Close()
-
-
-        body := &bytes.Buffer{}
-        writer := multipart.NewWriter(body)
-
-        writer.WriteField("description", "Demo Letter")
-        writer.WriteField("color", "false")
-        writer.WriteField("double_sided", "false")
-        writer.WriteField("address_placement", "insert_blank_page")
-        writer.WriteField("to", string(toAddyJSON))
-        writer.WriteField("from", string(fromAddyJSON))
-
-        part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
-
-        if err != nil {
-            log.Fatal(err)
-        }
-
-        io.Copy(part, file)
-        writer.Close()
-        request, err := http.NewRequest("POST", url, body)
-
-        if err != nil {
-            log.Fatal(err)
-        }
-
-        request.SetBasicAuth("live_71b0e2f396ec63f8cc2fc927f7de6d15a2e", "")
-
-        request.Header.Add("Content-Type", writer.FormDataContentType())
-        client := &http.Client{}
-
-        response, err := client.Do(request)
-
-        if err != nil {
-            log.Fatal(err)
-        }
-        defer response.Body.Close()
-
-        content, err := ioutil.ReadAll(response.Body)
-
-        log.Printf("%s", content)
 
         // return errors.New("what")
         d.Partial(false)
@@ -305,7 +253,130 @@ func resourceLLCUpdate(d *schema.ResourceData, m interface{}) error {
     return resourceLLCRead(d, m)
 }
 
+func lobPDF(filename string, d *schema.ResourceData) {
+    fromAddy := Address {
+        Name: d.Get("name").(string),
+        AddressLine1: d.Get("address").(string),
+        AddressState: "CA",
+        AddressCity: d.Get("city").(string),
+        AddressZip: d.Get("zip").(string),
+    }
+
+    toAddy := Address {
+        Name: "Kevin Kwok",
+        AddressLine1: "228 CLIPPER STREET",
+        // AddressLine2: "Unit 204",
+        AddressState: "CA",
+        AddressCity: "San Francisco",
+        AddressZip: "94114",
+    }
+
+    toAddyJSON, err := json.Marshal(toAddy)
+    if err != nil {
+        log.Print(err)
+    }
+    log.Print(string(toAddyJSON))
+
+    fromAddyJSON, err := json.Marshal(fromAddy)
+    if err != nil {
+        log.Print(err)
+    }
+    log.Print(string(fromAddyJSON))
+
+    url := "https://api.lob.com/v1/letters"
+
+    file, err := os.Open(filename)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+
+
+    body := &bytes.Buffer{}
+    writer := multipart.NewWriter(body)
+
+    writer.WriteField("description", "Demo Letter")
+    writer.WriteField("color", "false")
+    writer.WriteField("double_sided", "false")
+    writer.WriteField("address_placement", "insert_blank_page")
+    writer.WriteField("to", string(toAddyJSON))
+    writer.WriteField("from", string(fromAddyJSON))
+
+    part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    io.Copy(part, file)
+    writer.Close()
+    request, err := http.NewRequest("POST", url, body)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    request.SetBasicAuth("live_71b0e2f396ec63f8cc2fc927f7de6d15a2e", "")
+
+    request.Header.Add("Content-Type", writer.FormDataContentType())
+    client := &http.Client{}
+
+    response, err := client.Do(request)
+
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer response.Body.Close()
+
+    content, err := ioutil.ReadAll(response.Body)
+
+    log.Printf("%s", content)
+
+}
+
 func resourceLLCDelete(d *schema.ResourceData, m interface{}) error {
-    log.Printf("Creating membership")
+    file, err := os.OpenFile("info.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+    log.SetOutput(file)
+
+    d.Partial(true)
+
+    name_parts := strings.Split(d.Get("owner_name").(string), " ")
+    // old_name, new_name := d.GetChange("name")
+
+    form := fillpdf.Form{
+        "1FirstName": name_parts[0],
+        "1LastName": name_parts[1],
+        "1PhoneNumber": d.Get("phone_number").(string),
+        "EntityName": d.Get("name").(string),
+        "2EntityNumber": d.Id(),
+        // "1CorporationName": old_name.(string),
+        // "3bNewCorporationName": new_name.(string),
+        "2CommentsLine1": "$ terraform -v",
+        "2CommentsLine2": "Terraform v0.12.19",
+        "2CommentsLine3": "+ provider.terracorp (unversioned)",
+
+        "3ReturneeCompanyName": d.Get("name").(string),
+        "3ReturneeName": d.Get("owner_name").(string),
+        "3ReturneeAddress": d.Get("address").(string),
+        "3ReturneeCityStateZip": d.Get("city").(string) + ", CA " + d.Get("zip").(string),
+
+        "3": d.Id(),
+        "1": d.Get("name").(string),
+        "Type or Print Name": d.Get("owner_name").(string),
+
+    }
+
+    // Fill the form PDF with our values.
+    err = fillpdf.Fill(form, "templates/llc-4-8.pdf", "llc-4-8-filled.pdf", true)
+
+    if err != nil {
+        return err
+    }
+
     return nil
 }

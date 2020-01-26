@@ -5,3 +5,6 @@ terraform-provider-terracorp
 *.log
 llc-1-orig.pdf
 name-change-filled.pdf
+.DS_Store
+llc-1-filled.pdf
+llc-4-8-filled.pdf
