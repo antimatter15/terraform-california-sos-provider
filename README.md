@@ -29,9 +29,17 @@ resource "terracorp_llc" "acme-llc" {
 }
 ```
 
-Run `terraform plan` to see that it will file `Form LLC-1` to incorporate. 
+To see that it will file `Form LLC-1` to incorporate, run
 
-Run `terraform apply` to send the paperwork to the California Secretary of State at Sacramento P.O. Box 944260.
+```
+terraform plan
+```
+
+To send the paperwork to the California Secretary of State at Sacramento P.O. Box 944260 over physical mail through the Lob.com API, run
+
+```
+terraform apply
+```
 
 After the company has been incorporated, you can modify the `name` field in `main.tf` and run `terraform apply` and it will file `Form AMDT-STK-NA` to rename the company. 
 
