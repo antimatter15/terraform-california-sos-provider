@@ -263,12 +263,11 @@ func lobPDF(filename string, d *schema.ResourceData) {
     }
 
     toAddy := Address {
-        Name: "Kevin Kwok",
-        AddressLine1: "228 CLIPPER STREET",
-        // AddressLine2: "Unit 204",
+        Name: "Business Entities",
+        AddressLine1: "P.O. Box 944260",
         AddressState: "CA",
-        AddressCity: "San Francisco",
-        AddressZip: "94114",
+        AddressCity: "Sacramento",
+        AddressZip: "94244-2600",
     }
 
     toAddyJSON, err := json.Marshal(toAddy)
@@ -317,7 +316,7 @@ func lobPDF(filename string, d *schema.ResourceData) {
         log.Fatal(err)
     }
 
-    request.SetBasicAuth("live_71b0e2f396ec63f8cc2fc927f7de6d15a2e", "")
+    request.SetBasicAuth("LOB_API_KEY", "")
 
     request.Header.Add("Content-Type", writer.FormDataContentType())
     client := &http.Client{}
